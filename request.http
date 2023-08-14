@@ -1,0 +1,60 @@
+@apiUrlPrefix = https://ob.sandbox.natwest.com
+@redirectUrl = https://4e89d74b-617d-4f2c-9103-41d411bdda24.example.org/redirect
+@psuUsername = 123456789012@4e89d74b-617d-4f2c-9103-41d411bdda24.example.org
+
+### Retrieve well known endpoint
+
+@wellKnownEndpoint = https://api.sandbox.natwest.com/.well-known/openid-configuration
+
+# @name retrieveWellKnownEndpoint
+
+curl -k -X GET \
+  {{wellKnownEndpoint}}
+
+### Retrieve Access Token for Account Request
+
+@tokenEndpoint = {{retrieveWellKnownEndpoint.response.body.token_endpoint}}
+@authorizationEndpoint = {{retrieveWellKnownEndpoint.response.body.authorization_endpoint}}
+@grant_type = client_credentials
+@scope = accounts
+@clientId = Y70E0jcW7dxQh7sdHuDKNN3MXoiWzg5WXSm9v_4tbgU=
+@clientSecret = WJ5w1i5t1JGQy8ulnGAkNSisU_j59PE4l6W34gyiL9k=
+
+# @name retrieveAccessToken
+
+curl -k -X POST \
+  {{tokenEndpoint}} \
+  -H 'Content-Type: application/x-www-form-urlencoded' \
+  -d 'grant_type={{grant_type}}&client_id={{clientId}}&client_secret={{clientSecret}}&scope={{scope}}'
+
+
+### Post Account request
+
+@accountRequestAccessToken = {{retrieveAccessToken.response.body.access_token}}
+
+# @name postAccountRequest
+
+curl -k -X POST \
+  {{apiUrlPrefix}}/open-banking/v3.1/aisp/account-access-consents \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer {{accountRequestAccessToken}}' \
+  -d '{
+  "Data": {
+    "Permissions": [
+      "ReadAccountsDetail",
+      "ReadBalances",
+      "ReadTransactionsCredits",
+      "ReadTransactionsDebits",
+      "ReadTransactionsDetail"
+    ]
+  },
+  "Risk": {}
+}'
+
+### Approve Consent programmatically
+
+@accountConsentId = {{postAccountRequest.response.body.Data.ConsentId}};
+@encodedRedirectUrl = https://4e89d74b-617d-4f2c-9103-41d411bdda24.example.org/redirect
+
+curl -k -X GET \
+  {{authorizationEndpoint}}?client_id={{clientId}}&response_type=code id_token&scope=openid accounts&redirect_uri={{encodedRedirectUrl}}&state=ABC&request={{accountConsentId}}&authorization_mode=AUTO_POSTMAN&authorization_username={{psuUsername}}
