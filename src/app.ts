@@ -1,5 +1,7 @@
 import axios from "axios";
 import qs from "qs";
+import { config } from "dotenv";
+config();
 
 class NatwestOpenIDConfiguration {
   version: string;
@@ -137,27 +139,26 @@ type TransactionInformation = {
   };
 };
 
-class NatwestOpenBanking {
-  realmName = "NatWest";
-  apiUrlPrefix = "https://ob.sandbox.natwest.com";
-  wellKnownEndpoint =
-    "https://api.sandbox.natwest.com/.well-known/openid-configuration";
-  redirectUrl =
-    "https://4e89d74b-617d-4f2c-9103-41d411bdda24.example.org/redirect";
+type NatwestOpenBankingConfiguration = {
+  wellKnownEndpoint: string;
+  apiUrlPrefix: string;
+  redirectUrl: string;
   client_id: string;
   client_secret: string;
   psuUsername: string;
+};
 
-  constructor(client_id: string, client_secret: string, psuUsername: string) {
-    this.client_id = client_id;
-    this.client_secret = client_secret;
-    this.psuUsername = psuUsername;
+class NatwestOpenBanking {
+  private readonly configuration: NatwestOpenBankingConfiguration;
+
+  constructor(configuration: NatwestOpenBankingConfiguration) {
+    this.configuration = configuration;
   }
 
   async retrieveOpenIDConfiguration() {
     const response = await axios<NatwestOpenIDConfiguration>({
       method: "GET",
-      url: this.wellKnownEndpoint,
+      url: this.configuration.wellKnownEndpoint,
     });
 
     return response.data;
@@ -176,8 +177,8 @@ class NatwestOpenBanking {
       data: qs.stringify({
         grant_type,
         scope,
-        client_id: this.client_id,
-        client_secret: this.client_secret,
+        client_id: this.configuration.client_id,
+        client_secret: this.configuration.client_secret,
       }),
     });
 
@@ -187,7 +188,7 @@ class NatwestOpenBanking {
   async createAccountRequest(accessToken: string) {
     const response = await axios<ConsentInformation>({
       method: "POST",
-      url: `${this.apiUrlPrefix}/open-banking/v3.1/aisp/account-access-consents`,
+      url: `${this.configuration.apiUrlPrefix}/open-banking/v3.1/aisp/account-access-consents`,
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${accessToken}`,
@@ -213,11 +214,13 @@ class NatwestOpenBanking {
     authorizationEndpoint: string,
     accountConsentId: string
   ): Promise<ApprovedConsent> {
-    const encodedRedirectUrl = encodeURIComponent(this.redirectUrl);
+    const encodedRedirectUrl = encodeURIComponent(
+      this.configuration.redirectUrl
+    );
 
     const response = await axios<ApprovedConsent>({
       method: "GET",
-      url: `${authorizationEndpoint}?client_id=${this.client_id}&response_type=code id_token&scope=openid accounts&redirect_uri=${encodedRedirectUrl}&state=ABC&request=${accountConsentId}&authorization_mode=AUTO_POSTMAN&authorization_username=${this.psuUsername}`,
+      url: `${authorizationEndpoint}?client_id=${this.configuration.client_id}&response_type=code id_token&scope=openid accounts&redirect_uri=${encodedRedirectUrl}&state=ABC&request=${accountConsentId}&authorization_mode=AUTO_POSTMAN&authorization_username=${this.configuration.psuUsername}`,
     });
 
     const { redirectUri } = response.data;
@@ -256,9 +259,9 @@ class NatwestOpenBanking {
       },
       data: qs.stringify({
         grant_type,
-        client_id: this.client_id,
-        client_secret: this.client_secret,
-        redirect_uri: this.redirectUrl,
+        client_id: this.configuration.client_id,
+        client_secret: this.configuration.client_secret,
+        redirect_uri: this.configuration.redirectUrl,
         code,
       }),
     });
@@ -269,7 +272,7 @@ class NatwestOpenBanking {
   async listAccounts(apiAccessToken: string) {
     const response = await axios<AccountInformation>({
       method: "GET",
-      url: `${this.apiUrlPrefix}/open-banking/v3.1/aisp/accounts`,
+      url: `${this.configuration.apiUrlPrefix}/open-banking/v3.1/aisp/accounts`,
       headers: {
         // "Content-Type": "application/json",
         Authorization: `Bearer ${apiAccessToken}`,
@@ -282,7 +285,7 @@ class NatwestOpenBanking {
   async listTransactions(apiAccessToken: string, accountId: string) {
     const response = await axios<TransactionInformation>({
       method: "GET",
-      url: `${this.apiUrlPrefix}/open-banking/v3.1/aisp/accounts/${accountId}/transactions`,
+      url: `${this.configuration.apiUrlPrefix}/open-banking/v3.1/aisp/accounts/${accountId}/transactions`,
       headers: {
         // "Content-Type": "application/json",
         Authorization: `Bearer ${apiAccessToken}`,
@@ -294,16 +297,23 @@ class NatwestOpenBanking {
 }
 
 (async () => {
-  const client_id = "Y70E0jcW7dxQh7sdHuDKNN3MXoiWzg5WXSm9v_4tbgU=";
-  const client_secret = "WJ5w1i5t1JGQy8ulnGAkNSisU_j59PE4l6W34gyiL9k=";
-  const psuUsername =
-    "123456789012@4e89d74b-617d-4f2c-9103-41d411bdda24.example.org";
+  const {
+    WELL_KNOW_ENDPOINT,
+    API_URL_PREFIX,
+    CLIENT_ID,
+    CLIENT_SECRET,
+    PSU_USER_NAME,
+    REDIRECT_URL,
+  } = process.env;
 
-  const natwestOpenBanking = new NatwestOpenBanking(
-    client_id,
-    client_secret,
-    psuUsername
-  );
+  const natwestOpenBanking = new NatwestOpenBanking({
+    wellKnownEndpoint: WELL_KNOW_ENDPOINT,
+    client_id: CLIENT_ID,
+    client_secret: CLIENT_SECRET,
+    psuUsername: PSU_USER_NAME,
+    apiUrlPrefix: API_URL_PREFIX,
+    redirectUrl: REDIRECT_URL,
+  });
 
   const openIdConfiguration =
     await natwestOpenBanking.retrieveOpenIDConfiguration();
@@ -335,17 +345,17 @@ class NatwestOpenBanking {
     accounts.Data.Account[0].AccountId
   );
 
-  console.log(openIdConfiguration.token_endpoint);
+  console.log(`token_endpoint: ${openIdConfiguration.token_endpoint}`);
 
-  console.log(accessToken.access_token);
+  console.log(`access_token: ${accessToken.access_token}`);
 
-  console.log(consentInformation.Data.ConsentId);
+  console.log(`ConsentId: ${consentInformation.Data.ConsentId}`);
 
   console.log(approvedConsent.redirectUri);
 
-  console.log(apiAccessToken.access_token);
+  console.log(`api access_token: ${apiAccessToken.access_token}`);
 
-  console.log(accounts.Data.Account);
+  console.log("accounts:", accounts.Data.Account);
 
-  console.log(transactions.Data.Transaction);
+  console.log("transactions:", transactions.Data.Transaction);
 })();

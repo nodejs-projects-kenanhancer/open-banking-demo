@@ -1,10 +1,12 @@
-@apiUrlPrefix = https://ob.sandbox.natwest.com
-@redirectUrl = https://4e89d74b-617d-4f2c-9103-41d411bdda24.example.org/redirect
-@psuUsername = 123456789012@4e89d74b-617d-4f2c-9103-41d411bdda24.example.org
+@wellKnownEndpoint = {{$dotenv WELL_KNOW_ENDPOINT}}
+@apiUrlPrefix = {{$dotenv API_URL_PREFIX}}
+@redirectUrl = {{$dotenv REDIRECT_URL}}
+@psuUsername = {{$dotenv PSU_USER_NAME}}
+@clientId = {{$dotenv CLIENT_ID}}
+@clientSecret = {{$dotenv CLIENT_SECRET}}
 
 ### Retrieve well known endpoint
 
-@wellKnownEndpoint = https://api.sandbox.natwest.com/.well-known/openid-configuration
 
 # @name retrieveWellKnownEndpoint
 
@@ -17,8 +19,6 @@ curl -k -X GET \
 @authorizationEndpoint = {{retrieveWellKnownEndpoint.response.body.authorization_endpoint}}
 @grant_type = client_credentials
 @scope = accounts
-@clientId = Y70E0jcW7dxQh7sdHuDKNN3MXoiWzg5WXSm9v_4tbgU=
-@clientSecret = WJ5w1i5t1JGQy8ulnGAkNSisU_j59PE4l6W34gyiL9k=
 
 # @name retrieveAccessToken
 
@@ -54,7 +54,7 @@ curl -k -X POST \
 ### Approve Consent programmatically
 
 @accountConsentId = {{postAccountRequest.response.body.Data.ConsentId}};
-@encodedRedirectUrl = https://4e89d74b-617d-4f2c-9103-41d411bdda24.example.org/redirect
+@encodedRedirectUrl = {{redirectUrl}}
 
 curl -k -X GET \
   {{authorizationEndpoint}}?client_id={{clientId}}&response_type=code id_token&scope=openid accounts&redirect_uri={{encodedRedirectUrl}}&state=ABC&request={{accountConsentId}}&authorization_mode=AUTO_POSTMAN&authorization_username={{psuUsername}}
