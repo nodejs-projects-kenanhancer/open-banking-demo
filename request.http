@@ -28,7 +28,7 @@ curl -k -X POST \
   -d 'grant_type={{grant_type}}&client_id={{clientId}}&client_secret={{clientSecret}}&scope={{scope}}'
 
 
-### Post Account request
+### Post Account Access request
 
 @accountRequestAccessToken = {{retrieveAccessToken.response.body.access_token}}
 

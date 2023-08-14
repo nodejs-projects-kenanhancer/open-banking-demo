@@ -35,6 +35,21 @@ PSU_USER_NAME=
 REDIRECT_URL=
 ```
 
+## Symbols and Abbreviated terms
+API – Application Programming Interface
+
+CSRF - Cross Site Request Forgery
+
+FAPI - Financial API
+
+FI – Financial Institution
+
+HTTP – Hyper Text Transfer Protocol
+
+REST – Representational State Transfer
+
+TLS – Transport Layer Security
+
 ## Build
 ```shell
 npm run build
